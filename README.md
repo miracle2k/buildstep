@@ -1,52 +1,80 @@
-# Buildstep [![wercker status](https://app.wercker.com/status/c1c25f5d0ff8ea1823063000430114b2/s "wercker status")](https://app.wercker.com/project/bykey/c1c25f5d0ff8ea1823063000430114b2)
+miracle2k/buildstep
+===============
 
-Heroku-style application builds using Docker and Buildpacks. Used by [Dokku](https://github.com/progrium/dokku) to make a mini-Heroku.
+Base docker image to create containers from app code using Heroku's buildpacks.
 
-## Requirements
+Based on tutumcloud/buildstep and progrium/buildstep, both of them dormant projects.
 
- * Docker
- * Git
+Usage
+-----
 
-## Supported Buildpacks
+Create a `Dockerfile` similar to the following in your application code folder 
+(this example is for a typical Django app):
 
-Buildpacks should generally just work, but many of them make assumptions about their environment. So Buildstep has a [list of officially supported buildpacks](https://github.com/gliderlabs/herokuish/tree/master/buildpacks) that are built-in and ready to be used.
+```Dockerfile
+FROM miracle2k/buildstep
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+Modify the `EXPOSE` and `CMD` directives with the port to be exposed and the command
+used to launch your application respectively.
+
+Then, execute the following to build the image:
+
+	docker build -t myuser/myapp .
+
+This will create an image named `myuser/myapp` with your application ready to go.
+To launch it, just type:
+
+	docker run -d -p 8000 myuser/myapp
+
+Easy!
 
 
-## Building Buildstep
+Usage with Procfile
+-------------------
 
-The buildstep script uses a buildstep base container that needs to be built. It must be created before
-you can use the buildstep script. To create it, run:
+If you have already defined a `Procfile` (https://devcenter.heroku.com/articles/procfile)
+like the following:
 
-    $ make build
+	web: python manage.py runserver 0.0.0.0:8000
 
-This will create a container called `progrium/buildstep` that contains all supported buildpacks and the
-builder script that will actually perform the build using the buildpacks.
+you can use it by defining the following `Dockerfile` instead:
 
-## Building an App
+```Dockerfile
+FROM miracle2k/buildstep
+EXPOSE 8000
+CMD ["/start", "web"]
+```
 
-Running the buildstep script will take an application tar via STDIN and an application container name as
-an argument. It will put the application in a new container based on `progrium/buildstep` with the specified name.
-Then it runs the builder script inside the container.
+Modify the `EXPOSE` and `CMD` directives with the port to be exposed and the process
+type defined in the `Procfile` used to launch your application respectively.
 
-    $ cat myapp.tar | ./buildstep myapp
+It also works if you don't have a Procfile
 
-If you didn't already have an application tar, you can create one on the fly.
+Then, execute the following to build the image:
 
-    $ tar cC /path/to/your/app . | ./buildstep myapp
+	docker build -t myuser/myapp .
+	docker run -d -p 8000 myuser/myapp
 
-The resulting container has a built app ready to go. The builder script also parses the Procfile and produces
-a starter script that takes a process type. Run your app with:
+Done!
 
-    $ docker run -d myapp /bin/bash -c "/start web"
 
-## Custom Buildpacks
+On-the-fly usage
+----------------
 
-Custom buildpacks can be installed by committing a file in the root of your git repository named `.env`
-This file should contain a line `export BUILDPACK_URL=<repository>` specifying the git repository providing
-the buildpack.
+You can also make it run your application on the fly (without having to create or build a `Dockerfile`)
+by passing an environment variable `GIT_REPO` with your application's git repository URL.
 
-If your buildpack needs extra packages these can be installed by the buildpack using [bin/compile](https://devcenter.heroku.com/articles/buildpack-api#bin-compile).
+If your repository has a `Procfile` (or the buildpack you are using has a default `Procfile`), 
+you can specify the process type name as the run command.
+Otherwise, you can specify the actual command used to launch your application as the run command. For example:
 
-## License
+	# Without a Procfile
+	docker run -d -p 8000 -e PORT=8000 -e GIT_REPO=https://github.com/fermayo/hello-world-django.git tutum/buildstep python manage.py runserver 0.0.0.0:8000
 
-MIT
+	# With a Procfile (or relying on the default Procfile provided by the buildpack)
+	docker run -d -p 8000 -e PORT=8000 -e GIT_REPO=https://github.com/fermayo/hello-world-php.git tutum/buildstep /start web
+
+No `docker build` required!
