@@ -11,3 +11,12 @@ RUN /bin/herokuish buildpack install \
 
 # backwards compatibility
 ADD ./rootfs /
+
+# From tutum/buildstep
+ADD run.sh /run.sh
+RUN rm -fr /app
+
+ONBUILD ADD . /app
+ONBUILD RUN /build/builder
+
+ENTRYPOINT ["/run.sh"]
