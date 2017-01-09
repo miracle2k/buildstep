@@ -12,7 +12,7 @@ Create a `Dockerfile` similar to the following in your application code folder
 (this example is for a typical Django app):
 
 ```Dockerfile
-FROM miracle2k/buildstep
+FROM elsdoerfer/buildstep
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
